@@ -1,5 +1,8 @@
 package com.devansh.fintrack.controller;
 
+import com.devansh.fintrack.dto.request.CreateUserRequestDto;
+import com.devansh.fintrack.dto.request.UpdateUserRequestDto;
+import com.devansh.fintrack.dto.response.UserResponseDto;
 import com.devansh.fintrack.entity.User;
 import com.devansh.fintrack.service.UserService;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcProperties;
@@ -21,32 +24,33 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        User savedUser = userService.createUser(user);
-        return ResponseEntity.ok(savedUser);
+    public ResponseEntity<UserResponseDto> createUser(
+            @RequestBody CreateUserRequestDto request) {
+         UserResponseDto response = userService.createUser(request);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUser(@PathVariable Long id) {
-        User user = userService.getUser(id);
+    public ResponseEntity<UserResponseDto> getUser(@PathVariable Long id) {
+        UserResponseDto user = userService.getUser(id);
 
         return ResponseEntity.ok(user);
     }
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers(){
-        List<User> users = userService.getAllUsers();
+    public ResponseEntity<List<UserResponseDto>> getAllUsers(){
+        List<UserResponseDto> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
     }
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id,
-                                           @RequestBody User updateUser){
-        User updatedUser = userService.updateUser(id, updateUser);
+    public ResponseEntity<UserResponseDto> updateUser(@PathVariable Long id,
+                                           @RequestBody UpdateUserRequestDto request){
+        UserResponseDto response = userService.updateUser(id, request);
 
-        return ResponseEntity.ok(updatedUser);
+        return ResponseEntity.ok(response);
     }
     @DeleteMapping("/{id}")
-    public ResponseEntity<User> deletUserById(@PathVariable Long id){
-        User deleteUserById = userService.deleteUser(id);
-        return ResponseEntity.ok(deleteUserById);
+    public ResponseEntity<Void> deletUserById(@PathVariable Long id){
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 }
