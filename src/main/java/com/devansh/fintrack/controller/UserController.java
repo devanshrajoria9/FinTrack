@@ -5,6 +5,7 @@ import com.devansh.fintrack.dto.request.UpdateUserRequestDto;
 import com.devansh.fintrack.dto.response.UserResponseDto;
 import com.devansh.fintrack.entity.User;
 import com.devansh.fintrack.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcProperties;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,7 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<UserResponseDto> createUser(
-            @RequestBody CreateUserRequestDto request) {
+           @Valid @RequestBody CreateUserRequestDto request) {
          UserResponseDto response = userService.createUser(request);
         return ResponseEntity.ok(response);
     }
@@ -42,8 +43,8 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDto> updateUser(@PathVariable Long id,
-                                           @RequestBody UpdateUserRequestDto request){
+    public ResponseEntity<UserResponseDto> updateUser( @PathVariable Long id,
+                                          @Valid @RequestBody UpdateUserRequestDto request){
         UserResponseDto response = userService.updateUser(id, request);
 
         return ResponseEntity.ok(response);
