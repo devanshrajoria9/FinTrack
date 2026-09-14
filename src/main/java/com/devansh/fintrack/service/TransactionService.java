@@ -2,18 +2,25 @@ package com.devansh.fintrack.service;
 
 import com.devansh.fintrack.dto.request.CreateTransactionRequestDto;
 
-import com.devansh.fintrack.dto.request.UpdateCategoryRequestDto;
+
 import com.devansh.fintrack.dto.request.UpdateTransactionRequestDto;
-import com.devansh.fintrack.dto.response.CategoryResponseDto;
+
 import com.devansh.fintrack.dto.response.TransactionResponseDto;
 import com.devansh.fintrack.entity.Category;
 import com.devansh.fintrack.entity.Transaction;
 import com.devansh.fintrack.entity.User;
 import com.devansh.fintrack.exception.ResourceNotFoundException;
+import com.devansh.fintrack.filter.TransactionFilter;
+import com.devansh.fintrack.filter.TransactionSpecification;
 import com.devansh.fintrack.repository.CategoryRepository;
 import com.devansh.fintrack.repository.TransactionRepository;
 import com.devansh.fintrack.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -68,12 +75,22 @@ public class TransactionService {
     }
 
 
-    public List<TransactionResponseDto> getAllTransactions(){
-        List<Transaction> transactions = transactionRepository.findAll();
+    public Page<TransactionResponseDto> getAllTransactions(
+            int page,
+            int size,
+            String sortBy,
+            String direction) {
 
-        return transactions.stream()
-                .map(this :: mapToDto)
-                .toList();
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Transaction> transactions =
+                transactionRepository.findAll(pageable);
+
+        return transactions.map(this::mapToDto);
     }
 
     @Transactional
@@ -93,7 +110,7 @@ public class TransactionService {
         existingTransaction.setTitle(updateTransaction.getTitle());
         existingTransaction.setAmount(updateTransaction.getAmount());
         existingTransaction.setDescription(updateTransaction.getDescription());
-        existingTransaction.setTransactionDate(LocalDateTime.now());
+
         existingTransaction.setType(updateTransaction.getType());
         existingTransaction.setCategory(category);
 
@@ -109,6 +126,20 @@ public class TransactionService {
         transactionRepository.delete(transaction);
 
     }
+
+    public List<TransactionResponseDto> filterTransaction(TransactionFilter filter){
+
+        Specification<Transaction> specification =
+                TransactionSpecification.filter(filter);
+
+        List<Transaction> transactions = transactionRepository.findAll(specification);
+
+        return transactions.stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+
 
     private Transaction mapToEntity(CreateTransactionRequestDto request,
                                    User user , Category category){

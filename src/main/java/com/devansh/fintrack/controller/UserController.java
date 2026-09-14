@@ -3,11 +3,10 @@ package com.devansh.fintrack.controller;
 import com.devansh.fintrack.dto.request.CreateUserRequestDto;
 import com.devansh.fintrack.dto.request.UpdateUserRequestDto;
 import com.devansh.fintrack.dto.response.UserResponseDto;
-import com.devansh.fintrack.entity.User;
+
 import com.devansh.fintrack.service.UserService;
 import jakarta.validation.Valid;
-import org.springframework.boot.webmvc.autoconfigure.WebMvcProperties;
-import org.springframework.http.RequestEntity;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

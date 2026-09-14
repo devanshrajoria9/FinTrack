@@ -50,15 +50,26 @@ public class UserService {
     }
 
     public UserResponseDto updateUser(Long id, UpdateUserRequestDto updateUser){
-        User existingUser =  userRepository.findById(id)
+
+        User existingUser = userRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("User with id " + id + " not found"));
+                        new ResourceNotFoundException(
+                                "User with id " + id + " not found"));
+
+        if (userRepository.existsByEmailAndIdNot(
+                updateUser.getEmail(), id)) {
+
+            throw new DuplicateResourceException(
+                    "User with email " + updateUser.getEmail()
+                            + " already exists");
+        }
 
         existingUser.setName(updateUser.getName());
         existingUser.setEmail(updateUser.getEmail());
         existingUser.setPassword(updateUser.getPassword());
 
         User savedUser = userRepository.save(existingUser);
+
         return mapToDto(savedUser);
     }
 

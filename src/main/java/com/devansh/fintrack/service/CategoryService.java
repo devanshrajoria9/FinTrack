@@ -7,7 +7,7 @@ import com.devansh.fintrack.entity.Category;
 import com.devansh.fintrack.exception.ResourceNotFoundException;
 import com.devansh.fintrack.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
+
 
 import java.util.List;
 
