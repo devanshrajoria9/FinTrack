@@ -7,6 +7,7 @@ import com.devansh.fintrack.entity.User;
 import com.devansh.fintrack.exception.DuplicateResourceException;
 import com.devansh.fintrack.exception.ResourceNotFoundException;
 import com.devansh.fintrack.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,9 +17,11 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository){
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder){
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public UserResponseDto createUser(CreateUserRequestDto request){
@@ -66,7 +69,7 @@ public class UserService {
 
         existingUser.setName(updateUser.getName());
         existingUser.setEmail(updateUser.getEmail());
-        existingUser.setPassword(updateUser.getPassword());
+        existingUser.setPassword(passwordEncoder.encode(updateUser.getPassword()));
 
         User savedUser = userRepository.save(existingUser);
 
@@ -85,7 +88,7 @@ public class UserService {
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         return user;
     }
