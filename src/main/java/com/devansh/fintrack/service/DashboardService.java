@@ -3,8 +3,13 @@ package com.devansh.fintrack.service;
 import com.devansh.fintrack.dto.response.CategoryExpenseResponseDto;
 import com.devansh.fintrack.dto.response.DashboardSummaryResponseDto;
 import com.devansh.fintrack.dto.response.MonthlySummaryResponseDto;
+import com.devansh.fintrack.entity.User;
 import com.devansh.fintrack.enums.TransactionType;
+import com.devansh.fintrack.exception.ResourceNotFoundException;
 import com.devansh.fintrack.repository.TransactionRepository;
+import com.devansh.fintrack.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -14,18 +19,22 @@ import java.util.List;
 public class DashboardService {
 
     private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
 
-    public DashboardService(TransactionRepository transactionRepository) {
+    public DashboardService(TransactionRepository transactionRepository, UserRepository userRepository) {
         this.transactionRepository = transactionRepository;
+        this.userRepository = userRepository;
     }
 
     public DashboardSummaryResponseDto getSummary(){
 
+        User currentUser = getCurrentUser();
+
         BigDecimal totalIncome =
-                transactionRepository.getTotalAmountByType(TransactionType.INCOME);
+                transactionRepository.getTotalAmountByType(TransactionType.INCOME, currentUser.getId());
 
         BigDecimal totalExpense =
-                transactionRepository.getTotalAmountByType(TransactionType.EXPENSE);
+                transactionRepository.getTotalAmountByType(TransactionType.EXPENSE, currentUser.getId());
 
         BigDecimal balance = totalIncome.subtract(totalExpense);
 
@@ -39,8 +48,11 @@ public class DashboardService {
     }
 
     public List<CategoryExpenseResponseDto> getCategoryWiseExpenses(){
+
+        User currentUser = getCurrentUser();
+
         List<Object[]> results =
-                transactionRepository.getCategoryWiseExpenses();
+                transactionRepository.getCategoryWiseExpenses(currentUser.getId());
 
         return results.stream()
                 .map(result -> {
@@ -55,8 +67,11 @@ public class DashboardService {
     }
 
     public List<MonthlySummaryResponseDto> getMonthlySummary(){
+
+        User currentUser = getCurrentUser();
+
         List<Object[]> results =
-                transactionRepository.getMonthlySummary();
+                transactionRepository.getMonthlySummary(currentUser.getId());
 
         return results.stream()
                 .map(result -> {
@@ -71,5 +86,18 @@ public class DashboardService {
                     return response;
                 })
                 .toList();
+    }
+    private User getCurrentUser() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Current user not found"
+                        ));
     }
 }

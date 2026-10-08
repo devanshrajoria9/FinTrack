@@ -21,6 +21,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -48,12 +50,10 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponseDto createTransaction(CreateTransactionRequestDto request) {
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "User with id " + request.getUserId() + " not found"));
 
-        Category category = categoryRepository.findById(request.getCategoryId())
+        User user = getCurrentUser();
+
+        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(),user.getId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Category with id " + request.getCategoryId() + " not found"));
@@ -67,9 +67,16 @@ public class TransactionService {
 
 
     public TransactionResponseDto getTransaction(Long id ){
-        Transaction transaction = transactionRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Transaction with id " + id + " not found"));
+        User currentUser = getCurrentUser();
+
+        Transaction transaction =
+                transactionRepository.findByIdAndUserId(
+                                id,
+                                currentUser.getId()
+                        )
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Transaction with id " + id + " not found"));
 
         return mapToDto(transaction);
     }
@@ -87,8 +94,13 @@ public class TransactionService {
 
         Pageable pageable = PageRequest.of(page, size, sort);
 
+        User currentUser = getCurrentUser();
+
         Page<Transaction> transactions =
-                transactionRepository.findAll(pageable);
+                transactionRepository.findAllByUserId(
+                        currentUser.getId(),
+                        pageable
+                );
 
         return transactions.map(this::mapToDto);
     }
@@ -97,12 +109,18 @@ public class TransactionService {
     public TransactionResponseDto updateTransaction(
             Long id, UpdateTransactionRequestDto updateTransaction) {
 
-        Transaction existingTransaction = transactionRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Transaction with id " + id + " not found"));
+        User currentUser = getCurrentUser();
 
-        Category category = categoryRepository.findById(updateTransaction.getCategoryId())
+        Transaction existingTransaction =
+                transactionRepository.findByIdAndUserId(
+                                id,
+                                currentUser.getId()
+                        )
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Transaction with id " + id + " not found"));
+
+        Category category = categoryRepository.findByIdAndUserId(updateTransaction.getCategoryId(), currentUser.getId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Category with id " + updateTransaction.getCategoryId() + " not found"));
@@ -120,19 +138,35 @@ public class TransactionService {
     }
     @Transactional
     public void deleteTransaction(Long id){
-        Transaction transaction = transactionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Transaction with id " + id + " not found"));
+        User currentUser = getCurrentUser();
+
+        Transaction transaction =
+                transactionRepository.findByIdAndUserId(
+                                id,
+                                currentUser.getId()
+                        )
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Transaction with id " + id + " not found"));
 
         transactionRepository.delete(transaction);
 
     }
 
-    public List<TransactionResponseDto> filterTransaction(TransactionFilter filter){
+    public List<TransactionResponseDto> filterTransaction(TransactionFilter filter) {
+
+        User currentUser = getCurrentUser();
 
         Specification<Transaction> specification =
-                TransactionSpecification.filter(filter);
+                TransactionSpecification.filter(filter)
+                        .and((root, query, criteriaBuilder) ->
+                                criteriaBuilder.equal(
+                                        root.get("user").get("id"),
+                                        currentUser.getId()
+                                ));
 
-        List<Transaction> transactions = transactionRepository.findAll(specification);
+        List<Transaction> transactions =
+                transactionRepository.findAll(specification);
 
         return transactions.stream()
                 .map(this::mapToDto)
@@ -174,5 +208,17 @@ public class TransactionService {
         response.setUpdatedAt(transaction.getUpdatedAt());
 
         return response;
+    }
+
+    private User getCurrentUser() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Current user not found"));
     }
 }

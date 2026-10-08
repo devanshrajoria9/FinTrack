@@ -7,11 +7,13 @@ import com.devansh.fintrack.entity.User;
 import com.devansh.fintrack.exception.DuplicateResourceException;
 import com.devansh.fintrack.exception.ResourceNotFoundException;
 import com.devansh.fintrack.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+
+
 
 @Service
 public class UserService {
@@ -37,51 +39,64 @@ public class UserService {
         return mapToDto(savedUser);
     }
 
-    public UserResponseDto getUser(Long id){
-          User user = userRepository.findById(id)
-                  .orElseThrow(() ->
-                          new ResourceNotFoundException("User with id " + id + " not found"));
-          return mapToDto(user);
+    public UserResponseDto getUser(Long id) {
+
+        User currentUser = getCurrentUser();
+
+        if (!currentUser.getId().equals(id)) {
+            throw new ResourceNotFoundException(
+                    "User with id " + id + " not found"
+            );
+        }
+
+        return mapToDto(currentUser);
     }
 
-    public List<UserResponseDto> getAllUsers(){
-        List<User> users = userRepository.findAll();
-        return users.stream()
-                .map(this::mapToDto)
-                .toList();
 
-    }
 
-    public UserResponseDto updateUser(Long id, UpdateUserRequestDto updateUser){
+    public UserResponseDto updateUser(
+            Long id,
+            UpdateUserRequestDto updateUser) {
 
-        User existingUser = userRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "User with id " + id + " not found"));
+        User currentUser = getCurrentUser();
+
+        if (!currentUser.getId().equals(id)) {
+            throw new ResourceNotFoundException(
+                    "User with id " + id + " not found"
+            );
+        }
 
         if (userRepository.existsByEmailAndIdNot(
                 updateUser.getEmail(), id)) {
 
             throw new DuplicateResourceException(
                     "User with email " + updateUser.getEmail()
-                            + " already exists");
+                            + " already exists"
+            );
         }
 
-        existingUser.setName(updateUser.getName());
-        existingUser.setEmail(updateUser.getEmail());
-        existingUser.setPassword(passwordEncoder.encode(updateUser.getPassword()));
+        currentUser.setName(updateUser.getName());
+        currentUser.setEmail(updateUser.getEmail());
+        currentUser.setPassword(
+                passwordEncoder.encode(updateUser.getPassword())
+        );
 
-        User savedUser = userRepository.save(existingUser);
+        User savedUser = userRepository.save(currentUser);
 
         return mapToDto(savedUser);
     }
 
-    public void deleteUser(Long id){
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User with id " + id + " not found"));
+    public void deleteUser(Long id) {
 
-         userRepository.delete(user);
+        User currentUser = getCurrentUser();
 
+        if (!currentUser.getId().equals(id)) {
+            throw new ResourceNotFoundException(
+                    "User with id " + id + " not found"
+            );
+        }
+
+        userRepository.delete(currentUser);
     }
 
     private User mapToEntity(CreateUserRequestDto request){
@@ -106,5 +121,18 @@ public class UserService {
     }
     private boolean emailExists(User user){
         return userRepository.existsByEmail(user.getEmail());
+    }
+
+    private User getCurrentUser(){
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Current user not found")
+                );
     }
 }

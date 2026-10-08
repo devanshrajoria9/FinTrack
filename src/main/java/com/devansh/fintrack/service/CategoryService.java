@@ -4,8 +4,13 @@ import com.devansh.fintrack.dto.request.CreateCategoryRequestDto;
 import com.devansh.fintrack.dto.request.UpdateCategoryRequestDto;
 import com.devansh.fintrack.dto.response.CategoryResponseDto;
 import com.devansh.fintrack.entity.Category;
+import com.devansh.fintrack.entity.User;
 import com.devansh.fintrack.exception.ResourceNotFoundException;
 import com.devansh.fintrack.repository.CategoryRepository;
+import com.devansh.fintrack.repository.UserRepository;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 
@@ -14,13 +19,19 @@ import java.util.List;
 @Service
 public class CategoryService {
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
 
-    public CategoryService(CategoryRepository categoryRepository){
+    public CategoryService(CategoryRepository categoryRepository, UserRepository userRepository){
     this.categoryRepository = categoryRepository;
+        this.userRepository = userRepository;
     }
 
     public CategoryResponseDto createCategory(CreateCategoryRequestDto request){
+
+        User currentuser = getCurrentUser();
+
         Category category = mapToEntity(request);
+        category.setUser(currentuser);
 
         Category savedCategory = categoryRepository.save(category);
 
@@ -28,7 +39,10 @@ public class CategoryService {
     }
 
     public CategoryResponseDto getCategory(Long id ){
-        Category category = categoryRepository.findById(id)
+
+        User currentUser = getCurrentUser();
+
+        Category category = categoryRepository.findByIdAndUserId(id, currentUser.getId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Category with id "+ id+ " not found"));
 
@@ -36,7 +50,10 @@ public class CategoryService {
     }
 
     public List<CategoryResponseDto> getAllCategories(){
-        List<Category> categories = categoryRepository.findAll();
+
+        User currentUser = getCurrentUser();
+
+        List<Category> categories = categoryRepository.findAllByUserId(currentUser.getId());
 
         return categories.stream()
                 .map(this :: mapToDto)
@@ -44,7 +61,10 @@ public class CategoryService {
     }
 
     public CategoryResponseDto updateCategory(Long id, UpdateCategoryRequestDto updateCategory){
-        Category existingCategory = categoryRepository.findById(id)
+
+        User currentUser = getCurrentUser();
+
+        Category existingCategory = categoryRepository.findByIdAndUserId(id, currentUser.getId())
                 .orElseThrow(() ->
                 new ResourceNotFoundException("Category with id "+ id+ " not found"));
 
@@ -58,7 +78,10 @@ public class CategoryService {
     }
 
     public void deleteCategory(Long id){
-        Category category = categoryRepository.findById(id)
+
+        User currentUser = getCurrentUser();
+
+        Category category = categoryRepository.findByIdAndUserId(id, currentUser.getId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Category with id "+ id+ " not found"));
 
@@ -87,5 +110,15 @@ public class CategoryService {
         response.setUpdatedAt(category.getUpdatedAt());
 
         return response;
+    }
+
+    private User getCurrentUser(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
+
     }
 }
