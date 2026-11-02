@@ -4,14 +4,16 @@
     import org.springframework.context.annotation.Bean;
     import org.springframework.context.annotation.Configuration;
     import org.springframework.http.HttpMethod;
+    import org.springframework.http.HttpStatus;
     import org.springframework.security.authentication.AuthenticationManager;
     import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
     import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-    import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-    import org.springframework.security.crypto.password.PasswordEncoder;
+
+    import org.springframework.security.config.http.SessionCreationPolicy;
     import org.springframework.security.web.SecurityFilterChain;
+    import org.springframework.security.web.authentication.HttpStatusEntryPoint;
     import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-    import org.springframework.stereotype.Component;
+
 
     @Configuration
     public class SecurityConfig {
@@ -19,14 +21,14 @@
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-        public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        private final GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
+
+        public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler) {
             this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+            this.googleOAuth2SuccessHandler = googleOAuth2SuccessHandler;
         }
 
-        @Bean
-        public PasswordEncoder passwordEncoder(){
-            return new BCryptPasswordEncoder();
-            }
+
 
         @Bean
         public AuthenticationManager authenticationManager(
@@ -44,9 +46,22 @@
             http.csrf(csrf -> csrf.disable());
 
             http.authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/auth/login").permitAll()
+                    .requestMatchers("/auth/register", "/auth/login").permitAll()
+                    .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/user").permitAll()
                     .anyRequest().authenticated()
+
+            );
+
+            http.exceptionHandling(exception -> exception
+                    .defaultAuthenticationEntryPointFor(
+                            new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                            request -> request.getRequestURI().startsWith("/user")
+                    )
+            );
+
+            http.oauth2Login(oauth -> oauth
+                    .successHandler(googleOAuth2SuccessHandler)
             );
 
             http.addFilterBefore(
@@ -54,6 +69,12 @@
                     UsernamePasswordAuthenticationFilter.class
             );
 
+            http.sessionManagement(session -> session
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            );
+
             return http.build();
         }
+
+
     }

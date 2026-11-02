@@ -27,8 +27,8 @@ public class CreateTransactionRequestDto {
     @NotNull(message = "Transaction type is required")
     private TransactionType type;
 
-    @NotNull(message = "User Id is required")
-    private Long userId;
+//    @NotNull(message = "User Id is required")
+//    private Long userId;
     @NotNull(message = "Category Id is required")
     private Long categoryId;
 }

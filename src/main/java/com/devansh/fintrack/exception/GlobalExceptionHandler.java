@@ -3,8 +3,7 @@ package com.devansh.fintrack.exception;
 import com.devansh.fintrack.dto.response.ExceptionResponseDto;
 import com.devansh.fintrack.dto.response.ValidationExceptionResponseDto;
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.coyote.Request;
-import org.springframework.cglib.core.Local;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -76,4 +75,18 @@ public class GlobalExceptionHandler {
                 body(response);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ExceptionResponseDto> handleIllegalArgumentException(
+            IllegalArgumentException ex, HttpServletRequest request){
+
+        ExceptionResponseDto response = new ExceptionResponseDto(
+        LocalDateTime.now(),
+        HttpStatus.CONFLICT.value(),
+        HttpStatus.CONFLICT.getReasonPhrase(),
+        ex.getMessage(),
+        request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
 }
